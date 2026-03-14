@@ -1,0 +1,12 @@
+.topbar {
+    -fx-background-color: #343434;
+}
+.sidebar {
+    -fx-background-color: #2A2A2A;
+}
+.bottombar {
+    -fx-background-color: #242424;
+}
+.canvas {
+    -fx-background-color: #3A3A3A;
+}
