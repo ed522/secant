@@ -6,73 +6,97 @@ import javafx.scene.control.Button;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Paint;
+import javafx.scene.shape.Line;
+import javafx.scene.shape.Rectangle;
+import org.jetbrains.annotations.NotNull;
 
 public class PrimaryController {
 
-    private int verticalScroll = 0;
-    private int verticalSize = 16;
-    private int horizontalScroll = 0;
-    private int horizontalSize = 96;
+    private double verticalSize = 16;
+    private double horizontalSize = 96;
+    private int verticalCount = 40;
+    private int horizontalCount = 100;
 
-    private static final Background LIGHT = Background.fill(Paint.valueOf("#EFEFEF"));
-    private static final Background DARK = Background.fill(Paint.valueOf("#BFBFBF"));
-    private static final Border BORDER = Border.stroke(Paint.valueOf("#000000"));
+    private static final Paint LIGHT = Paint.valueOf("#404040");
+    private static final Paint DARK = Paint.valueOf("#2E2E2E");
+    private static final Paint LINE_STROKE = Paint.valueOf("#000000");
+    private static final Paint VERTICAL_LINE = Paint.valueOf("#707070");
+    private static final Paint VERTICAL_LINE_ACCENT = Paint.valueOf("#A0A0A0");
 
-    @FXML
-    private GridPane canvas;
+    private static final boolean[] LINE_IS_LIGHT = new boolean[]
+            {true, false, true, false, true, true, false, true, false, true, false, true};
+
+    @FXML private AnchorPane canvas;
+    @FXML private HBox chordBar;
 
     @FXML
     public void initialize() {
-        Platform.runLater(this::updateGrid);
+        this.canvas.setOnScroll(this::scrollBackground);
+        Platform.runLater(this::renderBackground);
+        Platform.runLater(this::renderNotes);
     }
 
-    @FXML
-    public void scrollPane(ScrollEvent event) {
-        this.horizontalScroll += (int) event.getDeltaX();
-        this.verticalScroll += (int) event.getDeltaY();
-        this.horizontalScroll %= horizontalSize;
-        this.verticalScroll %= verticalSize;
-        this.updateGrid();
+    private void renderBackground() {
 
-        System.out.println("scrolls");
-    }
+        this.canvas.setPrefWidth(horizontalSize * horizontalCount);
+        this.canvas.setPrefHeight(verticalSize * verticalCount);
 
-    private void updateGrid() {
-        this.canvas.getColumnConstraints().clear();
-        this.canvas.getRowConstraints().clear();
+        this.canvas.setMaxWidth(horizontalSize * horizontalCount);
+        this.canvas.setMaxHeight(verticalSize * verticalCount);
 
-        double width = this.canvas.getWidth();
-        double height = this.canvas.getHeight();
-
-        int verticalCount = (int) Math.floor((height + verticalScroll) / verticalSize);
-        int horizontalCount = (int) Math.floor((width + horizontalScroll) / horizontalSize);
-
-        ColumnConstraints column = new ColumnConstraints(horizontalSize);
-        for (int i = 0; i < horizontalCount; i++) {
-            this.canvas.getColumnConstraints().add(column);
-        }
-        this.canvas.getColumnConstraints().add(new ColumnConstraints(width % horizontalSize));
-
-        RowConstraints row = new RowConstraints(verticalSize);
         for (int i = 0; i < verticalCount; i++) {
-            this.canvas.getRowConstraints().add(new RowConstraints(verticalSize));
-        }
-        this.canvas.getRowConstraints().add(row);
 
-        for (int i = 0; i < horizontalCount + 1; i++) {
-            for (int j = 0; j < verticalCount + 1; j++) {
-                Pane pane = new Pane();
-                if (j % 2 == 0) {
-                    pane.setBackground(LIGHT);
-                } else {
-                    pane.setBackground(DARK);
-                }
-                pane.setBorder(BORDER);
-                pane.setMaxSize(horizontalSize, verticalSize);
-                this.canvas.add(pane, i, j);
+            // Add horizontal note guides
+            final Rectangle rectangle = new Rectangle(horizontalSize * horizontalCount, verticalSize);
+            rectangle.setStroke(LINE_STROKE);
+
+            // alternates like a piano in a diatonic scale
+            if (LINE_IS_LIGHT[i % LINE_IS_LIGHT.length]) {
+                rectangle.setFill(LIGHT);
+            } else {
+                rectangle.setFill(DARK);
             }
+            this.canvas.getChildren().add(rectangle);
+            AnchorPane.setLeftAnchor(rectangle, 0.0);
+            AnchorPane.setBottomAnchor(rectangle, (double) i * verticalSize);
         }
 
+        for (int i = 1; i < horizontalCount; i++) {
+            Line line = new Line(i * horizontalSize, 0, i * horizontalSize, verticalSize * verticalCount);
+            if (i % 4 == 0) {
+                line.setStroke(VERTICAL_LINE_ACCENT);
+            } else {
+                line.setStroke(VERTICAL_LINE);
+            }
+            this.canvas.getChildren().add(line);
+        }
+
+    }
+
+    private void scrollBackground(ScrollEvent event) {
+        if (event.isControlDown() && event.getEventType()) {
+            event.consume();
+            if (event.isShiftDown()) {
+                this.verticalSize += event.getDeltaY();
+            } else {
+                this.horizontalSize += event.getDeltaY();
+            }
+            Platform.runLater(this::renderBackground);
+        }
+    }
+
+    private void renderNotes() {
+
+    }
+
+    private void handleOnClick(@NotNull Pane pane) {
+        if (!pane.getChildren().isEmpty()) {
+            pane.getChildren().clear();
+        } else {
+            Button b = new Button("something");
+            b.setOnMouseClicked(e -> pane.getChildren().clear());
+            pane.getChildren().add(b);
+        }
     }
 
 }
