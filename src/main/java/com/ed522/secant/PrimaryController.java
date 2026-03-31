@@ -1,7 +1,9 @@
 package com.ed522.secant;
 
+import com.ed522.secant.theory.NoteCanvas;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
+import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.*;
@@ -37,23 +39,19 @@ public class PrimaryController {
     @FXML private HBox chordBar;
 
     private NoteCanvas noteCanvas;
+    private final Node note = new Rectangle(INITIAL_HORIZONTAL_SIZE, INITIAL_VERTICAL_SIZE);
 
     // Scales are logarithmic (ie. 2**scale = true scale factor)
     private double currentScaleX = 0;
     private double currentScaleY = 0;
 
     private final Scale canvasScale = new Scale(1, 1, 0, 0);
-    private double initialWidth;
-    private double initialHeight;
 
     @FXML
     public void initialize() {
-        this.initialWidth = canvasPane.getWidth();
-        this.initialHeight = canvasPane.getHeight();
         this.canvasPane.setOnScroll(this::scrollBackground);
         this.canvasPane.getTransforms().add(canvasScale);
         Platform.runLater(this::renderBackground);
-        Platform.runLater(this::renderNotes);
     }
 
     private void renderBackground() {
@@ -110,17 +108,11 @@ public class PrimaryController {
         }
     }
 
-    private void renderNotes() {
-
-    }
-
     private void handleOnClick(@NotNull Pane pane) {
         if (!pane.getChildren().isEmpty()) {
             pane.getChildren().clear();
         } else {
-            Button b = new Button("something");
-            b.setOnMouseClicked(e -> pane.getChildren().clear());
-            pane.getChildren().add(b);
+
         }
     }
 
