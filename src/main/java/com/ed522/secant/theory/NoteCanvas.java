@@ -12,12 +12,18 @@ public class NoteCanvas {
     private final List<TonalChord.Chord> chords;
     private final List<Consumer<Note>> onAddListeners;
     private final List<Consumer<Note>> onRemoveListeners;
+    private final ScaleSet scale;
 
-    public NoteCanvas() {
+    public NoteCanvas(final ScaleSet scale) {
+        this.scale = scale;
         this.chords = new ArrayList<>();
         this.notes = new ArrayList<>();
         this.onAddListeners = new ArrayList<>();
         this.onRemoveListeners = new ArrayList<>();
+    }
+
+    public ScaleSet getScale() {
+        return this.scale;
     }
 
     public void listenOnAdd(Consumer<Note> listener) {
@@ -32,8 +38,14 @@ public class NoteCanvas {
         this.onAddListeners.forEach(listener -> listener.accept(note));
     }
     public void removeNote(Note note) {
-        this.notes.remove(note);
+        this.notes.removeIf(n -> n.pitch().equals(note.pitch()) &&
+                n.rhythm().isAtSamePosition(note.rhythm()));
         this.onRemoveListeners.forEach(listener -> listener.accept(note));
+    }
+
+    public boolean hasNote(Note note) {
+        return this.notes.stream().anyMatch(n -> n.pitch().equals(note.pitch()) &&
+                n.rhythm().isAtSamePosition(note.rhythm()));
     }
 
     public void addChord(TonalChord.Chord chord) {

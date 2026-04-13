@@ -4,6 +4,7 @@ import com.ed522.secant.theory.Note;
 import com.ed522.secant.theory.NoteCanvas;
 import com.ed522.secant.theory.Pitch;
 import com.ed522.secant.theory.Rhythm;
+import com.ed522.secant.theory.ScaleSet;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.scene.Node;
@@ -14,6 +15,8 @@ import javafx.scene.shape.Line;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.transform.Scale;
 import org.jetbrains.annotations.NotNullByDefault;
+
+import java.util.HashMap;
 
 @NotNullByDefault
 public class PrimaryController {
@@ -36,6 +39,7 @@ public class PrimaryController {
     private static final boolean[] LINE_IS_LIGHT = new boolean[]
             {true, false, true, false, true, true, false, true, false, true, false, true};
     private static final double SCROLL_SCALE_FACTOR = 1.0 / 250.0;
+    private static final int BAR_LENGTH = 4;
 
     @FXML private AnchorPane canvas;
     @FXML private HBox chordBar;
@@ -45,9 +49,10 @@ public class PrimaryController {
     private int horizontalCount = 100;
     private int minOctave = 0;
     private int maxOctave = 7;
-    private com.ed522.secant.theory.Scale scale ;
 
-    private NoteCanvas noteCanvas;
+    private final NoteCanvas noteCanvas =
+            new NoteCanvas(ScaleSet.ofMajor(new Pitch(4, 0)));
+    private final HashMap<Long, Node> canvasNoteMap = new HashMap<>();
 
     // Scales are logarithmic (ie. 2**scale = true scale factor)
     private double currentScaleX = 0;
@@ -65,17 +70,46 @@ public class PrimaryController {
         this.canvas.setOnScroll(this::scrollBackground);
         this.canvas.setOnMouseClicked(e -> this.handleOnClick(e.getX(), e.getY()));
         this.canvas.getTransforms().add(canvasScale);
+
+        this.noteCanvas.listenOnAdd(note -> {
+            Node noteNode = this.makeNote();
+            this.canvas.getChildren().add(noteNode);
+
+            Coordinate2d coords = findCoordinates(note);
+            AnchorPane.setLeftAnchor(noteNode, coords.x() * HSIZE);
+            AnchorPane.setBottomAnchor(noteNode, coords.y() * VSIZE);
+            this.canvasNoteMap.put(((long) coords.x() << 32) | (long) coords.y(), noteNode);
+        });
+        this.noteCanvas.listenOnRemove(n -> {
+            Coordinate2d coords = findCoordinates(n);
+            long index = ((long) coords.x() << 32) | (long) coords.y();
+            this.canvas.getChildren().remove(this.canvasNoteMap.get(index));
+        });
+
         Platform.runLater(this::renderBackground);
     }
 
+    private PrimaryController.Coordinate2d findCoordinates(final Note note) {
+        int scaleSize = this.noteCanvas.getScale().getChromaticNoteCount();
+        int x = note.rhythm().barOffset() * BAR_LENGTH +
+                (BAR_LENGTH / note.rhythm().offsetValue()) * note.rhythm().offsetMultiplier();
+        int y = (note.pitch().octave() - this.minOctave) * scaleSize
+                + note.pitch().pitchClass();
+        return new Coordinate2d(x, y);
+    }
+
+    private record Coordinate2d(int x, int y) {}
+
     private void renderBackground() {
 
+        // max and min are inclusive, so add as many octaves as needed (each
+        // is the same size as the chromatic scale)
         this.verticalCount =
-                this.scale.getChromaticNoteCount() * (this.maxOctave - this.minOctave);
+                this.noteCanvas.getScale().getChromaticNoteCount()
+                * (this.maxOctave - this.minOctave + 1);
 
         this.canvas.setPrefWidth(HSIZE * horizontalCount);
         this.canvas.setPrefHeight(VSIZE * verticalCount);
-
         this.canvas.setMaxWidth(HSIZE * horizontalCount);
         this.canvas.setMaxHeight(VSIZE * verticalCount);
 
@@ -126,21 +160,27 @@ public class PrimaryController {
     }
 
     private void handleOnClick(double paneX, double paneY) {
-        Node note = this.makeNote();
-        this.canvas.getChildren().add(note);
 
-        int xIndex = (int) paneY / (int) VSIZE;
-        int yIndex = verticalCount - ((int) paneY / (int) VSIZE);
-        Pitch pitch = this.scale.getChromatic(
-                yIndex % this.scale.getChromaticNoteCount(),
-                yIndex / this.scale.getChromaticNoteCount() + minOctave
+        int chromaticNoteCount = this.noteCanvas.getScale().getChromaticNoteCount();
+        int xIndex = (int) paneX / (int) HSIZE;
+        // Clamp yIndex to ensure it stays within 0 to verticalCount - 1
+        int yIndex = Math.clamp(
+                (verticalCount - 1) - (int) paneY / (int) VSIZE,
+                0, verticalCount - 1
         );
+        Pitch pitch = this.noteCanvas.getScale().forChromatic(
+                yIndex % chromaticNoteCount,
+                yIndex / chromaticNoteCount + minOctave - this.noteCanvas.getScale().getTonic().octave()
+        );
+        // TODO make work with mutliple signatures (low-pri)
         Rhythm rhythm = new Rhythm(1, 4,
-                xIndex % 4, xIndex / 4, 4);
-        this.noteCanvas.addNote(new Note(rhythm, pitch));
+                xIndex / 4, xIndex % 4, 4);
 
-        AnchorPane.setLeftAnchor(note, paneX - (paneX % HSIZE));
-        AnchorPane.setTopAnchor(note, paneY - (paneY % VSIZE));
+        if (this.noteCanvas.hasNote(new Note(rhythm, pitch))) {
+            this.noteCanvas.removeNote(new Note(rhythm, pitch));
+        } else {
+            this.noteCanvas.addNote(new Note(rhythm, pitch));
+        }
     }
 
 }
