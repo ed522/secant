@@ -2,6 +2,7 @@ module com.ed522.secant {
     requires javafx.controls;
     requires javafx.fxml;
     requires org.jetbrains.annotations;
+    requires java.desktop;
 
     opens com.ed522.secant to javafx.fxml;
     exports com.ed522.secant;
