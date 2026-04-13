@@ -15,4 +15,12 @@ package com.ed522.secant.theory;
 /// @param offsetValue      A value for its offset within a bar, in the same
 ///                         terms as its regular value
 public record Rhythm(int multiplier, int value, int barOffset,
-                     int offsetMultiplier, int offsetValue) {}
+                     int offsetMultiplier, int offsetValue) {
+
+    public boolean isAtSamePosition(final Rhythm rhythm) {
+        return this.barOffset() == rhythm.barOffset() &&
+                this.offsetMultiplier() == rhythm.offsetMultiplier() &&
+                this.offsetValue() == rhythm.offsetValue();
+    }
+
+}

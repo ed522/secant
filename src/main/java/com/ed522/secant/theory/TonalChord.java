@@ -2,9 +2,7 @@ package com.ed522.secant.theory;
 
 import org.jetbrains.annotations.Unmodifiable;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 
 public class TonalChord {
 
@@ -44,7 +42,7 @@ public class TonalChord {
     private final Pitch root;
     private final PitchModification[] pitchModifications;
     private final StructureModification[] structureModifications;
-    private final Scale scale;
+    private final ScaleSet scale;
 
     public Pitch[] getPitches() {
         return pitches.clone();
@@ -58,7 +56,7 @@ public class TonalChord {
     public StructureModification[] getStructureModifications() {
         return structureModifications.clone();
     }
-    public Scale getScale() {
+    public ScaleSet getScale() {
         return scale;
     }
 
@@ -75,21 +73,21 @@ public class TonalChord {
     ///  9. Apply inversion
     private void buildPitches() {
         // get an in-context scale
-        Scale newScale;
+        ScaleSet newScale;
         if (!scale.isDiatonic(root)) {
-            newScale = scale.inMode(scale.diatonicDegreeOf(root));
+            newScale = scale.modeShift(scale.diatonicDegreeOf(root));
         } else {
             // major by default, if it's a borrowed root then we can
-            newScale = Scale.ofMajor(root);
+            newScale = ScaleSet.ofMajor(root);
         }
         // hashmap so that more than one degree cannot exist, and so that
         // it's easy to remove/replace degrees
         HashMap<Integer, Pitch> currentPitches = new HashMap<>();
 
         // make triad
-        currentPitches.put(0, newScale.getDiatonic(0, root.octave()));
-        currentPitches.put(2, newScale.getDiatonic(2, root.octave()));
-        currentPitches.put(4, newScale.getDiatonic(4, root.octave()));
+        currentPitches.put(0, newScale.forDiatonic(0, root.octave()));
+        currentPitches.put(2, newScale.forDiatonic(2, root.octave()));
+        currentPitches.put(4, newScale.forDiatonic(4, root.octave()));
 
         // TODO: apply other modifications
         // (...)
@@ -98,7 +96,7 @@ public class TonalChord {
 
     }
 
-    public TonalChord(Scale scale, Pitch root,
+    public TonalChord(ScaleSet scale, Pitch root,
                       StructureModification[] structureModifications, PitchModification[] pitchModifications) {
         this.scale = scale;
         this.root = root;
@@ -112,7 +110,7 @@ public class TonalChord {
      * @param scale
      * @param root
      */
-    public TonalChord(Scale scale, Pitch root) {
+    public TonalChord(ScaleSet scale, Pitch root) {
         this(scale, root, new StructureModification[0], new PitchModification[0]);
     }
 
